@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DURO Dashboard - Quotation & Project Calculator</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* DURO Premium Design System */
+        :root {
+            --bg-body: #F5F5F7;
+            --bg-surface: #FFFFFF;
+            --bg-panel: #F2F2F7;
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --border: #D2D2D7;
+            --accent: #F7931A; /* DURO Theme Orange */
+            --accent-hover: #E08516;
+            --danger: #FF3B30;
+            --danger-bg: #FFEBE9;
+            --success: #34C759;
+            --warning: #FF9500;
+            --warning-bg: #FFF4E5;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            z-index: 10;
+        }
+
+        /* Main Workspace Layout */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            height: 60px; /* Slimmer header */
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 5;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header img {
+            height: 36px; /* Smaller, professional sizing */
+            object-fit: contain;
+        }
+
+        .header-controls {
+            position: absolute;
+            right: 30px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .workspace {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            scroll-behavior: smooth;
+        }
+
+        /* Typography & Cards */
+        h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.5px; color: var(--text-primary); }
+        h2 { font-size: 22px; margin-bottom: 24px; }
+        h3 { font-size: 16px; margin-bottom: 16px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;}
+
+        .card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 32px;
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: box-shadow 0.3s ease;
+        }
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+        input, textarea, select {
+            width: 100%; padding: 12px 16px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 15px; background: var(--bg-surface);
+            transition: all 0.2s ease; color: var(--text-primary);
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(247, 147, 26, 0.15); /* Orange glow */
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* Search */
+        .search-container { position: relative; margin-bottom: 20px; }
+        .search-results {
+            position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-surface);
+            border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-md);
+            max-height: 250px; overflow-y: auto; z-index: 50; display: none; margin-top: 4px;
+        }
+        .search-item { padding: 12px 16px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--bg-body); }
+        .search-item:hover { background: var(--bg-body); color: var(--accent); }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent); color: white; border: none; padding: 12px 24px;
+            border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+        .btn-outline:hover { background: rgba(247, 147, 26, 0.05); }
+        .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(255, 59, 48, 0.2); }
+        .btn-danger:hover { background: rgba(255, 59, 48, 0.15); }
+        .btn-icon { padding: 8px; border-radius: 6px; font-size: 16px; width: 34px; height: 34px; display:flex; align-items:center; justify-content:center;}
+
+        /* Sidebar Elements */
+        .project-list { list-style: none; margin-top: 20px; overflow-y: auto; flex: 1; }
+        .project-item {
+            padding: 14px 16px; border-radius: 8px; cursor: pointer; margin-bottom: 8px;
+            font-size: 15px; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s ease; border: 1px solid transparent; font-weight: 500;
+        }
+        .project-item:hover { background: var(--bg-panel); }
+        .project-item.active { background: rgba(247, 147, 26, 0.08); color: var(--accent); font-weight: 600; border-color: rgba(247, 147, 26, 0.2); }
+
+        /* Professional Tables */
+        .table-wrapper { 
+            overflow-x: auto; margin-top: 20px; border-radius: 8px; 
+            border: 1px solid var(--border); background: var(--bg-surface); 
+            padding-bottom: 10px;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+        th { 
+            color: var(--text-secondary); font-weight: 600; font-size: 12px; 
+            text-transform: uppercase; letter-spacing: 0.5px; 
+            padding: 16px 12px; border-bottom: 1px solid var(--border); background: var(--bg-panel);
+        }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+        
+        /* Clean Inputs inside Tables to fix cutoff numbers */
+        .table-input { 
+            width: 100%; padding: 8px 12px; font-size: 14px; 
+            border: 1px solid transparent; background: transparent; border-radius: 6px; 
+        }
+        .table-input:hover { background: var(--bg-body); }
+        .table-input:focus { border-color: var(--accent); background: var(--bg-surface); }
+        
+        /* Column Widths to prevent number cutoff */
+        .col-wide { min-width: 180px; }
+        .col-med { min-width: 140px; }
+        .col-num { min-width: 110px; }
+        .col-small { min-width: 80px; }
+
+        /* Metrics & Dashboards */
+        .metric-card { background: var(--bg-panel); padding: 24px; border-radius: var(--radius-md); text-align: center; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center;}
+        .metric-value { font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .metric-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .info-panel { background: var(--bg-panel); padding: 24px; border-radius: var(--radius-md); margin-bottom: 24px; }
+        .info-panel ul { padding-left: 20px; font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+        .info-panel li { margin-bottom: 8px; }
+
+        .ai-panel { background: rgba(247, 147, 26, 0.05); border: 1px solid rgba(247, 147, 26, 0.2); }
+        .bi-panel { background: var(--bg-body); border: 1px solid var(--border); }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content {
+            background: var(--bg-surface); padding: 32px; border-radius: var(--radius-lg);
+            width: 100%; max-width: 900px; box-shadow: var(--shadow-md);
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        /* PDF Render Styles (Hidden) */
+        #pdf-render-zone { display: none; background: white; padding: 40px; color: black; position: relative; font-family: Arial, sans-serif; }
+        .pdf-watermark {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            opacity: 0.05; pointer-events: none; z-index: 0; width: 450px;
+        }
+        .pdf-content { position: relative; z-index: 1; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <button class="btn" style="width: 100%; margin-bottom: 24px;" onclick="createProject()">+ New Project</button>
+        <h3 style="font-size: 12px;">Workspace Projects</h3>
+        <ul class="project-list" id="project-list"></ul>
+        <div style="margin-top: 20px;">
+            <button class="btn btn-outline" style="width: 100%; margin-bottom: 12px;" onclick="openInventoryModal()">Manage Inventory</button>
+            <p style="font-size: 11px; color: var(--text-secondary); text-align: center; font-weight:600; letter-spacing: 1px;">DURO AUTOMATION</p>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="header">
+            <img src="logo.png" alt="DURO AUTOMATION Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iNzAiPjx0ZXh0IHk9IjQ1IiBmb250LWZhbWlseT0iU0YgUHJvIERpc3BsYXksIEFyaWFsIiBmb250LXNpemU9IjMyIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iI0Y3OTMxQSI+RFVSTzwvdGV4dD48L3N2Zz4='">
+            
+            <div class="header-controls">
+                <button class="btn btn-outline" onclick="appUndo()" id="btn-undo" disabled>↺ Undo</button>
+                <button class="btn btn-outline" onclick="appRedo()" id="btn-redo" disabled>↻ Redo</button>
+            </div>
+        </header>
+
+        <div class="workspace" id="workspace" style="display: none;">
+            
+            <div class="card">
+                <h3>Project Configuration</h3>
+                <div class="grid-4">
+                    <div class="form-group"><label>Client Name</label><input type="text" id="p-client" oninput="liveUpdateMeta()"></div>
+                    <div class="form-group"><label>Project Name</label><input type="text" id="p-name" oninput="liveUpdateMeta()"></div>
+                    <div class="form-group"><label>Location</label><input type="text" id="p-location" oninput="liveUpdateMeta()"></div>
+                    <div class="form-group"><label>Date</label><input type="date" id="p-date" oninput="liveUpdateMeta()"></div>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Design Notes & Requirements</label>
+                    <textarea id="p-notes" oninput="liveUpdateMeta()"></textarea>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                    <div>
+                        <h3>Hardware Quotation Engine</h3>
+                        <div class="search-container" style="margin-bottom: 0; width: 400px;">
+                            <input type="text" id="inv-search" placeholder="Search inventory by Brand or Name..." oninput="handleSearch(this.value)">
+                            <div class="search-results" id="search-results"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="addBlankProduct()">+ Add Custom Hardware</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="products-table">
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Product Name</th>
+                                <th>Description</th>
+                                <th>Unit</th>
+                                <th>MRP (₹)</th>
+                                <th>MRP Tax</th>
+                                <th>Disc %</th>
+                                <th>Purch. Base (₹)</th>
+                                <th>Profit %</th>
+                                <th>Sell Base (₹)</th>
+                                <th>GST %</th>
+                                <th>Qty</th>
+                                <th>Total (₹)</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>Service & Integration Labour</h3>
+                    <button class="btn btn-outline" onclick="addService()">+ Add Labour Entry</button>
+                </div>
+
+                <div class="info-panel ai-panel" id="ai-suggestion-panel">
+                    <h4 style="color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        DURO AI Insights & Predictions
+                    </h4>
+                    <div id="ai-text" style="font-size: 14px; color: var(--text-primary); line-height: 1.6; display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="services-table">
+                        <thead>
+                            <tr>
+                                <th class="col-wide">Labour Type / Description</th>
+                                <th class="col-num">No. of Techs</th>
+                                <th class="col-num">Days Required</th>
+                                <th class="col-num">Daily Wage (₹)</th>
+                                <th class="col-small">GST %</th>
+                                <th class="col-num">Service Total (₹)</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="services-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Financial Architecture</h3>
+                <div class="grid-3" style="margin-bottom: 24px;">
+                    <div class="metric-card">
+                        <div class="metric-value" id="tot-proc-orig">₹0</div>
+                        <div class="metric-label">Hardware Procurement: Original<br><span style="text-transform:none; font-size:10px; color:var(--text-secondary);">(Purch. Base + Input GST)</span></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="tot-proc-cust">₹0</div>
+                        <div class="metric-label">Hardware Cost: To Customer<br><span style="text-transform:none; font-size:10px; color:var(--text-secondary);">(Sell Base + Output GST)</span></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="tot-duro-profit" style="color: var(--success);">₹0</div>
+                        <div class="metric-label">DURO Net Profit<br><span style="text-transform:none; font-size:10px; color:var(--text-secondary);">(HW Profit + Service Revenue)</span></div>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="info-panel" style="margin-bottom: 0;">
+                        <h4>Comprehensive GST Breakdown</h4>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-primary);">
+                            <span>Hardware Output GST (To Collect):</span><strong id="gst-out-hw">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-primary);">
+                            <span>Service Output GST (To Collect):</span><strong id="gst-out-srv">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--success);">
+                            <span>(-) Hardware ITC (Paid to Dist.):</span><strong id="gst-in">₹0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px;">
+                            <span>Actual GST Payable to Govt:</span><strong id="gst-net" style="color: var(--danger);">₹0</strong>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 12px; color: var(--text-secondary);" id="gst-split">CGST: ₹0 | SGST: ₹0</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div class="metric-card" style="background: var(--text-primary); color: white; margin: 0; padding: 32px 24px; border:none;">
+                            <div class="metric-value" id="tot-grand" style="color: var(--accent); font-size: 36px;">₹0</div>
+                            <div class="metric-label" style="color: #F5F5F7;">Total Customer Quotation</div>
+                        </div>
+                        <div class="info-panel" style="background: rgba(52, 199, 89, 0.1); margin: 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(52, 199, 89, 0.2);">
+                            <div>
+                                <h4 style="color: var(--success); margin-bottom: 4px;">Advance to Procure</h4>
+                                <p style="font-size: 13px; color: var(--text-secondary);">Exact cost to buy hardware from dist.</p>
+                            </div>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--success);" id="tot-advance">₹0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="info-panel bi-panel" id="bi-panel">
+                    <h4 style="margin-bottom: 12px;">DURO Business Intelligence</h4>
+                    <ul id="bi-list"></ul>
+                </div>
+                <div class="info-panel">
+                    <h4>Calculation Engine Logic</h4>
+                    <ul>
+                        <li><strong>Original Procurement:</strong> Purchase Base + Input GST. This is the exact amount you pay the distributor to buy the materials.</li>
+                        <li><strong>To Customer:</strong> Selling Base + Output GST. This is the hardware portion you bill the client.</li>
+                        <li><strong>DURO Profit:</strong> (Customer Price excl. tax) - (Purchase Base excl. tax) + Total Service Revenue.</li>
+                        <li><strong>Net Payable GST:</strong> Total Output GST (Hardware + Service) minus Hardware ITC.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: right; padding-bottom: 60px;">
+                <button class="btn" style="font-size: 16px; padding: 16px 32px;" onclick="exportPDF()">Export Quotation to PDF</button>
+            </div>
+        </div>
+
+        <div id="empty-state" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary);">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; opacity: 0.5;">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <h2>No Project Selected</h2>
+            <p>Create or select a project from the sidebar to begin.</p>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="inv-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2>Inventory Database</h2>
+                <button class="btn-icon btn-outline" style="border:none;" onclick="closeInventoryModal()">✕</button>
+            </div>
+            
+            <div class="grid-4" style="margin-bottom: 16px;">
+                <input type="text" id="inv-new-brand" placeholder="Brand Name">
+                <input type="text" id="inv-new-name" placeholder="Product Name">
+                <select id="inv-new-unit">
+                    <option value="pcs">pcs</option>
+                    <option value="Kg">Kg</option>
+                    <option value="meter">meter</option>
+                </select>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="inv-new-mrp" placeholder="MRP (₹)" min="0">
+                    <input type="number" id="inv-new-gst" placeholder="GST %" value="18" min="0">
+                </div>
+            </div>
+            <div class="form-group" style="display: flex; gap: 16px;">
+                <input type="text" id="inv-new-desc" placeholder="Product Description..." style="flex: 1;">
+                <button class="btn" style="width: 120px;" onclick="addToInventory()">Add Item</button>
+            </div>
+
+            <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                <table id="inv-table">
+                    <thead><tr><th>Brand</th><th>Product Name</th><th>Description</th><th>Unit</th><th>MRP (₹)</th><th>GST %</th><th></th></tr></thead>
+                    <tbody id="inv-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-render-zone">
+        <img src="logo.png" class="pdf-watermark" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iMjAwIj48dGV4dCB5PSIxMjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMDAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDAwMDAwIj5EVVJPPC90ZXh0Pjwvc3ZnPg=='">
+        <div class="pdf-content">
+            <div style="text-align: center; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 30px;">
+                <img src="logo.png" style="height: 65px; margin-bottom: 10px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNzAiPjx0ZXh0IHk9IjQ1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMzAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRjc5MzFBIj5EVVJBPC90ZXh0Pjwvc3ZnPg=='">
+                <h1 style="font-size: 22px; letter-spacing: 1px; color: #1D1D1F;">DURO AUTOMATION PRIVATE LIMITED</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 4px;">Smart Home Quotation</p>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 14px; line-height: 1.6; color: #1D1D1F;">
+                <div>
+                    <strong>Client:</strong> <span id="pdf-client"></span><br>
+                    <strong>Location:</strong> <span id="pdf-location"></span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Project:</strong> <span id="pdf-name"></span><br>
+                    <strong>Date:</strong> <span id="pdf-date"></span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 15px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; color: #1D1D1F;">Hardware Bill of Materials</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; color: #1D1D1F;">
+                <thead>
+                    <tr style="background: #f5f5f7;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Product Details</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Qty</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Base Price (₹)</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">GST</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Total Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-products-body"></tbody>
+            </table>
+
+            <h3 style="font-size: 15px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; color: #1D1D1F;">Service & Integration</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; color: #1D1D1F;">
+                <thead>
+                    <tr style="background: #f5f5f7;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Base Amount (₹)</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">GST</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Total (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-services-body"></tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 40px; color: #1D1D1F;">
+                <div style="width: 350px; font-size: 14px; line-height: 1.8;">
+                    <div style="display: flex; justify-content: space-between;"><span>Hardware Base:</span> <strong id="pdf-hw-base">₹0</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Hardware GST:</span> <strong id="pdf-hw-gst">₹0</strong></div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid #ddd; margin-top: 4px; padding-top: 4px;"><span>Service Base:</span> <strong id="pdf-srv-base">₹0</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Service GST:</span> <strong id="pdf-srv-gst">₹0</strong></div>
+                    <div style="display: flex; justify-content: space-between; border-top: 2px solid var(--accent); margin-top: 10px; padding-top: 10px; font-size: 18px;">
+                        <span>Grand Total:</span> <strong id="pdf-grand">₹0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 20px;">
+                <strong>Terms & Conditions:</strong>
+                <ul style="padding-left: 20px; margin-top: 8px; line-height: 1.6;">
+                    <li>Quotation is valid for 15 days.</li>
+                    <li>Advance required: <span id="pdf-advance-text"></span> to initiate procurement.</li>
+                    <li>DURO AUTOMATION PRIVATE LIMITED reserves the right to modify specifications for technical necessity.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Core Data Architecture ---
+        const STORAGE_KEY = 'duro_master_data';
+        let state = {
+            projects: [],
+            inventory: [
+                { id: 'inv_1', brand: 'DURO', name: 'Smart Switch', desc: '4 Gang Touch Panel', unit: 'pcs', mrp: 4500, gst: 18 },
+                { id: 'inv_2', brand: 'DURO', name: 'Curtain Motor', desc: 'Wi-Fi enabled heavy duty', unit: 'pcs', mrp: 12000, gst: 18 },
+                { id: 'inv_3', brand: 'Generic', name: 'Cat6 Cable', desc: 'Network wiring', unit: 'meter', mrp: 45, gst: 18 }
+            ],
+            activeProjectId: null
+        };
+
+        // --- Undo / Redo Engine ---
+        let historyStack = [];
+        let historyIndex = -1;
+
+        function saveSnapshot() {
+            if(!state.activeProjectId) return;
+            const proj = state.projects.find(p => p.id === state.activeProjectId);
+            const snap = JSON.stringify(proj);
+            if (historyIndex >= 0 && historyStack[historyIndex] === snap) return;
+
+            historyStack = historyStack.slice(0, historyIndex + 1);
+            historyStack.push(snap);
+            if(historyStack.length > 30) historyStack.shift();
+            else historyIndex++;
+            updateHistoryUI();
+        }
+
+        function appUndo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreSnapshot(historyStack[historyIndex]);
+            }
+        }
+
+        function appRedo() {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                restoreSnapshot(historyStack[historyIndex]);
+            }
+        }
+
+        function restoreSnapshot(snapStr) {
+            const restored = JSON.parse(snapStr);
+            const idx = state.projects.findIndex(p => p.id === state.activeProjectId);
+            if(idx > -1) { state.projects[idx] = restored; persistState(); renderWorkspace(); updateHistoryUI(); }
+        }
+
+        function updateHistoryUI() {
+            document.getElementById('btn-undo').disabled = historyIndex <= 0;
+            document.getElementById('btn-redo').disabled = historyIndex >= historyStack.length - 1;
+        }
+
+        // --- State Management ---
+        function persistState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+        
+        function initApp() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if(saved) state = JSON.parse(saved);
+            
+            // Migrate old data if missing fields
+            state.inventory.forEach(i => { i.brand = i.brand || ''; i.desc = i.desc || ''; i.unit = i.unit || 'pcs'; });
+            state.projects.forEach(p => { 
+                p.items.forEach(i => { i.brand = i.brand || ''; i.desc = i.desc || ''; i.unit = i.unit || 'pcs'; i.gstType = i.gstType || 'excl'; });
+                p.services.forEach(s => { s.gst = s.gst || 18; });
+            });
+
+            renderProjectList();
+            if(state.activeProjectId && state.projects.find(p => p.id === state.activeProjectId)) {
+                loadProject(state.activeProjectId);
+            } else showEmptyState();
+        }
+
+        function genId() { return Math.random().toString(36).substr(2, 9); }
+        function formatInr(num) { return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num); }
+
+        // --- Project Handling ---
+        function createProject() {
+            const id = genId();
+            state.projects.unshift({
+                id, client: 'New Client', name: 'Untitled Project', location: '', 
+                date: new Date().toISOString().split('T')[0], notes: '', items: [], services: []
+            });
+            persistState(); renderProjectList(); loadProject(id);
+        }
+
+        function loadProject(id) {
+            state.activeProjectId = id; persistState(); renderProjectList();
+            historyStack = []; historyIndex = -1; saveSnapshot();
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('workspace').style.display = 'block';
+            
+            const p = state.projects.find(x => x.id === id);
+            document.getElementById('p-client').value = p.client || '';
+            document.getElementById('p-name').value = p.name || '';
+            document.getElementById('p-location').value = p.location || '';
+            document.getElementById('p-date').value = p.date || '';
+            document.getElementById('p-notes').value = p.notes || '';
+            renderWorkspace();
+        }
+
+        function showEmptyState() {
+            document.getElementById('workspace').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'flex';
+        }
+
+        function liveUpdateMeta() {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            p.client = document.getElementById('p-client').value;
+            p.name = document.getElementById('p-name').value;
+            p.location = document.getElementById('p-location').value;
+            p.date = document.getElementById('p-date').value;
+            p.notes = document.getElementById('p-notes').value;
+            persistState(); renderProjectList();
+        }
+
+        function renderProjectList() {
+            const list = document.getElementById('project-list');
+            list.innerHTML = '';
+            state.projects.forEach(p => {
+                const li = document.createElement('li');
+                li.className = `project-item ${p.id === state.activeProjectId ? 'active' : ''}`;
+                li.innerHTML = `
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Untitled'}</span>
+                    <button class="btn-icon" style="background:none; border:none; color:inherit; cursor:pointer;" onclick="event.stopPropagation(); deleteProject('${p.id}')">✕</button>
+                `;
+                li.onclick = () => loadProject(p.id);
+                list.appendChild(li);
+            });
+        }
+
+        function deleteProject(id) {
+            if(!confirm("Delete this project permanently?")) return;
+            state.projects = state.projects.filter(p => p.id !== id);
+            if(state.activeProjectId === id) state.activeProjectId = null;
+            persistState(); initApp();
+        }
+
+        // --- Inventory ---
+        function openInventoryModal() { document.getElementById('inv-modal').style.display = 'flex'; renderInventoryTable(); }
+        function closeInventoryModal() { document.getElementById('inv-modal').style.display = 'none'; }
+
+        function addToInventory() {
+            const brand = document.getElementById('inv-new-brand').value;
+            const name = document.getElementById('inv-new-name').value;
+            const desc = document.getElementById('inv-new-desc').value;
+            const unit = document.getElementById('inv-new-unit').value;
+            const mrp = parseFloat(document.getElementById('inv-new-mrp').value);
+            const gst = parseFloat(document.getElementById('inv-new-gst').value);
+            
+            if(!name || isNaN(mrp) || mrp < 0) return alert("Product Name and valid MRP required.");
+            
+            state.inventory.push({ id: genId(), brand, name, desc, unit, mrp, gst: isNaN(gst) ? 18 : gst });
+            persistState(); renderInventoryTable();
+            
+            ['inv-new-brand', 'inv-new-name', 'inv-new-desc', 'inv-new-mrp'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inv-body');
+            tbody.innerHTML = '';
+            state.inventory.forEach(i => {
+                tbody.innerHTML += `<tr>
+                    <td><input type="text" class="table-input" value="${i.brand}" onchange="updateInv('${i.id}','brand',this.value)"></td>
+                    <td><input type="text" class="table-input col-med" value="${i.name}" onchange="updateInv('${i.id}','name',this.value)"></td>
+                    <td><input type="text" class="table-input col-wide" value="${i.desc}" onchange="updateInv('${i.id}','desc',this.value)"></td>
+                    <td><select class="table-input" onchange="updateInv('${i.id}','unit',this.value)">
+                        <option value="pcs" ${i.unit==='pcs'?'selected':''}>pcs</option>
+                        <option value="Kg" ${i.unit==='Kg'?'selected':''}>Kg</option>
+                        <option value="meter" ${i.unit==='meter'?'selected':''}>meter</option>
+                    </select></td>
+                    <td><input type="number" class="table-input col-small" value="${i.mrp}" onchange="updateInv('${i.id}','mrp',this.value)"></td>
+                    <td><input type="number" class="table-input col-small" value="${i.gst}" onchange="updateInv('${i.id}','gst',this.value)"></td>
+                    <td><button class="btn-icon btn-danger" onclick="deleteInv('${i.id}')">✕</button></td>
+                </tr>`;
+            });
+        }
+
+        function updateInv(id, field, val) {
+            const item = state.inventory.find(i => i.id === id);
+            if(['mrp', 'gst'].includes(field)) item[field] = Math.max(0, parseFloat(val) || 0);
+            else item[field] = val;
+            persistState();
+        }
+
+        function deleteInv(id) { state.inventory = state.inventory.filter(i => i.id !== id); persistState(); renderInventoryTable(); }
+
+        // --- Quick Search ---
+        function handleSearch(query) {
+            const res = document.getElementById('search-results');
+            if(query.length < 2) { res.style.display = 'none'; return; }
+            const q = query.toLowerCase();
+            const matches = state.inventory.filter(i => i.name.toLowerCase().includes(q) || i.brand.toLowerCase().includes(q));
+            
+            if(matches.length === 0) { res.style.display = 'none'; return; }
+            res.innerHTML = '';
+            matches.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.innerText = `${m.brand ? m.brand+' - ' : ''}${m.name} (₹${m.mrp})`;
+                div.onclick = () => { addProduct(m); document.getElementById('inv-search').value = ''; res.style.display = 'none'; };
+                res.appendChild(div);
+            });
+            res.style.display = 'block';
+        }
+        document.addEventListener('click', (e) => { if(!e.target.closest('.search-container')) document.getElementById('search-results').style.display = 'none'; });
+
+        // --- Hardware Quotation ---
+        function addProduct(inv = null) {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            p.items.push({
+                id: genId(), brand: inv?inv.brand:'', name: inv?inv.name:'', desc: inv?inv.desc:'', unit: inv?inv.unit:'pcs',
+                mrp: inv?inv.mrp:0, gstType: 'excl', discount: 40, profit: 20, gst: inv?inv.gst:18, qty: 1
+            });
+            saveSnapshot(); persistState(); renderWorkspace();
+        }
+        function addBlankProduct() { addProduct(); }
+
+        function deleteProduct(id) {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            p.items = p.items.filter(i => i.id !== id);
+            saveSnapshot(); persistState(); renderWorkspace();
+        }
+
+        function updateProductInput(id, field, valStr) {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            const item = p.items.find(i => i.id === id);
+            
+            if(['brand', 'name', 'desc', 'unit', 'gstType'].includes(field)) item[field] = valStr;
+            else {
+                let val = parseFloat(valStr);
+                if(isNaN(val)) val = 0;
+                if(field === 'mrp' && val < 0) val = 0;
+                if(field === 'discount') val = Math.min(90, Math.max(0, val));
+                if(field === 'profit') val = Math.min(100, Math.max(0, val));
+                if(field === 'qty') val = Math.max(1, val);
+                if(field === 'gst' && val < 0) val = 0;
+                item[field] = val;
+            }
+            renderWorkspace(); // Live reactive update
+        }
+
+        function handleInputBlur() { persistState(); saveSnapshot(); }
+
+        // --- Services ---
+        function addService() {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            p.services.push({ id: genId(), desc: 'Installation Technician', labour: 1, days: 1, wage: 1000, gst: 18 });
+            saveSnapshot(); persistState(); renderWorkspace();
+        }
+        function deleteService(id) {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            p.services = p.services.filter(s => s.id !== id);
+            saveSnapshot(); persistState(); renderWorkspace();
+        }
+        function updateServiceInput(id, field, val) {
+            const srv = state.projects.find(x => x.id === state.activeProjectId).services.find(s => s.id === id);
+            if(field === 'desc') srv.desc = val;
+            else srv[field] = isNaN(parseFloat(val)) ? 0 : Math.max(0, parseFloat(val));
+            renderWorkspace();
+        }
+
+        // --- Render Engine ---
+        function renderWorkspace() {
+            const proj = state.projects.find(p => p.id === state.activeProjectId);
+            if(!proj) return;
+
+            let totPurchBase = 0, totSellBase = 0, totProfit = 0, totHwGst = 0, devCount = 0;
+            let totSrvBase = 0, totSrvGst = 0, totItc = 0;
+
+            // Products
+            const pBody = document.getElementById('products-body');
+            pBody.innerHTML = '';
+            
+            proj.items.forEach(item => {
+                // Determine true base price before any math if MRP includes GST
+                let mrpBase = item.mrp;
+                if (item.gstType === 'incl') {
+                    mrpBase = item.mrp / (1 + (item.gst / 100));
+                }
+
+                const purchBase = mrpBase - (mrpBase * (item.discount / 100));
+                
+                // Calculate Input Tax Credit based on the purchase base
+                const itcAmt = purchBase * (item.gst / 100);
+                totItc += itcAmt * item.qty;
+
+                const profitAmt = purchBase * (item.profit / 100);
+                const sellBase = purchBase + profitAmt;
+                const gstAmt = sellBase * (item.gst / 100); // Output GST
+                const custPrice = sellBase + gstAmt;
+                const total = custPrice * item.qty;
+
+                totPurchBase += purchBase * item.qty;
+                totProfit += profitAmt * item.qty;
+                totSellBase += sellBase * item.qty;
+                totHwGst += gstAmt * item.qty;
+                
+                if(item.unit === 'pcs') devCount += parseInt(item.qty);
+
+                const warn = item.profit < 10 ? 'color: var(--danger); font-weight:bold;' : '';
+
+                pBody.innerHTML += `<tr>
+                    <td><input type="text" class="table-input col-small" value="${item.brand}" oninput="updateProductInput('${item.id}','brand',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="text" class="table-input col-med" value="${item.name}" oninput="updateProductInput('${item.id}','name',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="text" class="table-input col-wide" value="${item.desc}" oninput="updateProductInput('${item.id}','desc',this.value)" onchange="handleInputBlur()"></td>
+                    <td><select class="table-input" onchange="updateProductInput('${item.id}','unit',this.value); handleInputBlur();">
+                        <option value="pcs" ${item.unit==='pcs'?'selected':''}>pcs</option>
+                        <option value="Kg" ${item.unit==='Kg'?'selected':''}>Kg</option>
+                        <option value="meter" ${item.unit==='meter'?'selected':''}>meter</option>
+                    </select></td>
+                    <td><input type="number" class="table-input col-num" value="${item.mrp}" oninput="updateProductInput('${item.id}','mrp',this.value)" onchange="handleInputBlur()"></td>
+                    <td><select class="table-input col-small" onchange="updateProductInput('${item.id}','gstType',this.value); handleInputBlur();">
+                        <option value="excl" ${item.gstType==='excl'?'selected':''}>Excl</option>
+                        <option value="incl" ${item.gstType==='incl'?'selected':''}>Incl</option>
+                    </select></td>
+                    <td><input type="number" class="table-input col-small" value="${item.discount}" oninput="updateProductInput('${item.id}','discount',this.value)" onchange="handleInputBlur()"></td>
+                    <td style="font-weight: 500; color:var(--text-secondary);" class="col-num">₹${formatInr(purchBase)}</td>
+                    <td><input type="number" class="table-input col-small" style="${warn}" value="${item.profit}" oninput="updateProductInput('${item.id}','profit',this.value)" onchange="handleInputBlur()"></td>
+                    <td style="font-weight: 500;" class="col-num">₹${formatInr(sellBase)}</td>
+                    <td><input type="number" class="table-input col-small" value="${item.gst}" oninput="updateProductInput('${item.id}','gst',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="number" class="table-input col-small" value="${item.qty}" oninput="updateProductInput('${item.id}','qty',this.value)" onchange="handleInputBlur()"></td>
+                    <td style="font-weight: 700; color: var(--accent);" class="col-num">₹${formatInr(total)}</td>
+                    <td><button class="btn-icon btn-danger" onclick="deleteProduct('${item.id}')">✕</button></td>
+                </tr>`;
+            });
+
+            // Services
+            const sBody = document.getElementById('services-body');
+            sBody.innerHTML = '';
+
+            proj.services.forEach(srv => {
+                const baseTotal = srv.labour * srv.days * srv.wage;
+                const gstAmt = baseTotal * (srv.gst / 100);
+                const total = baseTotal + gstAmt;
+                
+                totSrvBase += baseTotal;
+                totSrvGst += gstAmt;
+
+                sBody.innerHTML += `<tr>
+                    <td><input type="text" class="table-input col-wide" value="${srv.desc}" oninput="updateServiceInput('${srv.id}','desc',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="number" class="table-input col-num" value="${srv.labour}" oninput="updateServiceInput('${srv.id}','labour',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="number" class="table-input col-num" value="${srv.days}" oninput="updateServiceInput('${srv.id}','days',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="number" class="table-input col-num" value="${srv.wage}" oninput="updateServiceInput('${srv.id}','wage',this.value)" onchange="handleInputBlur()"></td>
+                    <td><input type="number" class="table-input col-small" value="${srv.gst}" oninput="updateServiceInput('${srv.id}','gst',this.value)" onchange="handleInputBlur()"></td>
+                    <td style="font-weight: 700;" class="col-num">₹${formatInr(total)}</td>
+                    <td><button class="btn-icon btn-danger" onclick="deleteService('${srv.id}')">✕</button></td>
+                </tr>`;
+            });
+
+            // Calculate precise core metrics
+            const originalProcurement = totPurchBase + totItc; // What you actually pay to get the parts
+            const customerHardwareCost = totSellBase + totHwGst; // What the customer pays you for the parts
+            const duroNetProfit = totProfit + totSrvBase; // Your HW Margin + Total Service Revenue
+            
+            const totOutputGst = totHwGst + totSrvGst;
+            const netPayable = Math.max(0, totOutputGst - totItc);
+            const itcCarryForward = Math.max(0, totItc - totOutputGst);
+            const totGrand = totSellBase + totSrvBase + totOutputGst;
+
+            // Update Dashboards - Top Row
+            document.getElementById('tot-proc-orig').innerText = `₹${formatInr(originalProcurement)}`;
+            document.getElementById('tot-proc-cust').innerText = `₹${formatInr(customerHardwareCost)}`;
+            document.getElementById('tot-duro-profit').innerText = `₹${formatInr(duroNetProfit)}`;
+            
+            // Tax Breakdown
+            document.getElementById('gst-out-hw').innerText = `₹${formatInr(totHwGst)}`;
+            document.getElementById('gst-out-srv').innerText = `₹${formatInr(totSrvGst)}`;
+            document.getElementById('gst-in').innerText = `₹${formatInr(totItc)}`;
+            document.getElementById('gst-net').innerText = `₹${formatInr(netPayable)}`;
+            document.getElementById('gst-split').innerText = `CGST: ₹${formatInr(netPayable/2)} | SGST: ₹${formatInr(netPayable/2)} ${itcCarryForward > 0 ? `(ITC Carry Forward: ₹${formatInr(itcCarryForward)})` : ''}`;
+
+            document.getElementById('tot-grand').innerText = `₹${formatInr(totGrand)}`;
+            document.getElementById('tot-advance').innerText = `₹${formatInr(originalProcurement)}`;
+            window.lastAdvance = originalProcurement; // Storing for PDF generation
+
+            // --- AI Insights Engine ---
+            let aiHtml = '';
+            
+            if(devCount > 0) {
+                const estTech = Math.max(1, Math.ceil(devCount / 20));
+                const estDays = Math.max(1, Math.ceil(devCount / (estTech * 10)));
+                const estCost = estTech * estDays * 1200;
+                aiHtml += `<div>🧑‍🔧 <strong>Execution:</strong> AI recommends <strong>${estTech}</strong> Tech(s) for <strong>${estDays}</strong> Day(s) based on ${devCount} discrete hardware items. Estimated overhead cost: <strong>₹${formatInr(estCost)}</strong>.</div>`;
+            } else {
+                aiHtml += `<div>🧑‍🔧 Add hardware items to generate an execution estimate.</div>`;
+            }
+
+            const overallMargin = totSellBase > 0 ? (totProfit / totSellBase) * 100 : 0;
+            if (totSellBase > 0) {
+                if (overallMargin < 15) {
+                    aiHtml += `<div>⚠️ <strong>Profitability:</strong> Your hardware margin is running low at <strong>${overallMargin.toFixed(1)}%</strong>. Consider raising your profit % to ensure adequate buffer for unforeseen site variations.</div>`;
+                } else {
+                    aiHtml += `<div>✅ <strong>Profitability:</strong> Your hardware margin is healthy at <strong>${overallMargin.toFixed(1)}%</strong>.</div>`;
+                }
+            }
+
+            if (totOutputGst > 0 || totItc > 0) {
+                aiHtml += `<div>🏦 <strong>Tax Strategy:</strong> You will collect ₹${formatInr(totOutputGst)} in GST from the client. Subtracting your ₹${formatInr(totItc)} in expected Input Tax Credit (ITC) from distributor purchases, your actual real-world cash payment to the government will be <strong>₹${formatInr(netPayable)}</strong>.</div>`;
+            }
+
+            document.getElementById('ai-text').innerHTML = aiHtml || "Add items to your quote to unlock DURO AI analysis.";
+
+            // BI Panel
+            const biList = document.getElementById('bi-list');
+            biList.innerHTML = '';
+            let warns = 0;
+            if(totSellBase > 0 && overallMargin < 10) { biList.innerHTML += `<li>⚠️ <strong>Critical Margin:</strong> Hardware profit margin is under 10%. Please review integraton markup.</li>`; warns++; }
+            if(devCount > 0 && totSrvBase === 0) { biList.innerHTML += `<li>⚠️ <strong>Missing Service:</strong> Hardware detected but no installation labour added.</li>`; warns++; }
+            if(warns === 0) biList.innerHTML = `<li style="color:var(--success); font-weight:600;">✅ Financial parameters are within normal ranges.</li>`;
+        }
+
+        // --- PDF Export ---
+        function exportPDF() {
+            const p = state.projects.find(x => x.id === state.activeProjectId);
+            if(!p || p.items.length === 0) return alert("Add items to quotation before exporting.");
+
+            document.getElementById('pdf-client').innerText = p.client;
+            document.getElementById('pdf-location').innerText = p.location;
+            document.getElementById('pdf-name').innerText = p.name;
+            document.getElementById('pdf-date').innerText = p.date;
+
+            const pBody = document.getElementById('pdf-products-body');
+            pBody.innerHTML = '';
+            let hwBaseTot = 0, hwGstTot = 0, grand = 0;
+
+            p.items.forEach(i => {
+                let mrpBase = i.mrp;
+                if (i.gstType === 'incl') {
+                    mrpBase = i.mrp / (1 + (i.gst / 100));
+                }
+
+                const purchBase = mrpBase * (1 - i.discount/100);
+                const sellBase = purchBase * (1 + i.profit/100);
+                const gstAmt = sellBase * (i.gst/100);
+                const total = (sellBase + gstAmt) * i.qty;
+
+                hwBaseTot += sellBase * i.qty; hwGstTot += gstAmt * i.qty; grand += total;
+
+                const details = `<strong>${i.brand?i.brand+' - ':''}${i.name}</strong><br><span style="color:#666; font-size:10px;">${i.desc}</span>`;
+                
+                pBody.innerHTML += `<tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${details}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${i.qty} ${i.unit}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatInr(sellBase)}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${i.gst}%</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight:bold;">${formatInr(total)}</td>
+                </tr>`;
+            });
+
+            const sBody = document.getElementById('pdf-services-body');
+            sBody.innerHTML = '';
+            let srvBaseTot = 0, srvGstTot = 0;
+            
+            if(p.services.length > 0) {
+                p.services.forEach(s => {
+                    const base = s.labour * s.days * s.wage;
+                    const gst = base * (s.gst / 100);
+                    const total = base + gst;
+                    
+                    srvBaseTot += base; srvGstTot += gst; grand += total;
+                    sBody.innerHTML += `<tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${s.desc} (${s.labour} Tech(s) × ${s.days} Day(s))</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatInr(base)}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${s.gst}%</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight:bold;">${formatInr(total)}</td>
+                    </tr>`;
+                });
+            } else {
+                sBody.innerHTML = `<tr><td colspan="4" style="padding:10px; border:1px solid #ddd; text-align:center;">No services added.</td></tr>`;
+            }
+
+            document.getElementById('pdf-hw-base').innerText = `₹${formatInr(hwBaseTot)}`;
+            document.getElementById('pdf-hw-gst').innerText = `₹${formatInr(hwGstTot)}`;
+            document.getElementById('pdf-srv-base').innerText = `₹${formatInr(srvBaseTot)}`;
+            document.getElementById('pdf-srv-gst').innerText = `₹${formatInr(srvGstTot)}`;
+            document.getElementById('pdf-grand').innerText = `₹${formatInr(grand)}`;
+            document.getElementById('pdf-advance-text').innerText = `₹${formatInr(window.lastAdvance || 0)}`;
+
+            const el = document.getElementById('pdf-render-zone');
+            el.style.display = 'block';
+
+            html2pdf().set({
+                margin: 0.5,
+                filename: `DURO_Quote_${p.name.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            }).from(el).save().then(() => el.style.display = 'none');
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
